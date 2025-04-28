@@ -1,12 +1,14 @@
-
 import multer from 'multer';
-import fs from 'fs';
 import { google } from 'googleapis';
 import { catchAsyncError } from '../middlewares/CatchAsyncError.js';
 import { Resource } from '../models/Resource.js';
+import path from 'path';
+import fs from 'fs';
 
 // Multer Setup
-const upload = multer({ dest: 'uploads/' }); // Make sure 'uploads/' exists
+const upload = multer({
+  dest: '/tmp/', // Change to /tmp to work with Vercel's writable directory
+});
 
 const auth = new google.auth.GoogleAuth({
   keyFile: './config/credentials_google_cloud.json',
@@ -25,15 +27,20 @@ export const addResource = [
         return res.status(400).json({ success: false, message: 'No file uploaded.' });
       }
 
+      // Ensure the file path is valid, stored in /tmp
+      const filePath = path.join('/tmp', req.file.filename);
+
       const fileMetadata = {
         name: req.file.originalname,
         parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
       };
+
       const media = {
         mimeType: req.file.mimetype,
-        body: fs.createReadStream(req.file.path),
+        body: fs.createReadStream(filePath), // Read file from /tmp
       };
 
+      // Upload to Google Drive
       const file = await drive.files.create({
         resource: fileMetadata,
         media: media,
@@ -50,7 +57,8 @@ export const addResource = [
 
       await newResource.save();
 
-      fs.unlinkSync(req.file.path); // Clean up local file
+      // Clean up the local file in /tmp after uploading to Google Drive
+      fs.unlinkSync(filePath);
 
       res.status(200).json({
         success: true,
@@ -66,6 +74,7 @@ export const addResource = [
     }
   }),
 ];
+
 
 export const getResources = catchAsyncError(async (req, res) => {
     const { level, subject, resourceType } = req.query;
