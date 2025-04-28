@@ -2,7 +2,6 @@ import multer from 'multer';
 import { google } from 'googleapis';
 import { catchAsyncError } from '../middlewares/CatchAsyncError.js';
 import { Resource } from '../models/Resource.js';
-import { promisify } from 'util';
 import stream from 'stream';
 
 
@@ -17,7 +16,6 @@ const drive = google.drive({ version: 'v3', auth });
 // Memory storage avoids filesystem issues
 const upload = multer({ storage: multer.memoryStorage() });
 
-const pipeline = promisify(stream.pipeline);
 
 export const addResource = [
   upload.single('file'),
@@ -37,12 +35,13 @@ export const addResource = [
         parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
       };
 
+      // Create a simple readable stream from the buffer
       const bufferStream = new stream.PassThrough();
-      await pipeline(req.file.buffer, bufferStream);
+      bufferStream.end(req.file.buffer); // Just end the stream with the buffer
 
       const media = {
         mimeType: req.file.mimetype,
-        body: bufferStream,
+        body: bufferStream, // This is now a proper stream
       };
 
       const file = await drive.files.create({
