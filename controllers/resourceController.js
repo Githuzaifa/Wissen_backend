@@ -2,13 +2,7 @@ import multer from 'multer';
 import { google } from 'googleapis';
 import { catchAsyncError } from '../middlewares/CatchAsyncError.js';
 import { Resource } from '../models/Resource.js';
-import path from 'path';
-import fs from 'fs';
 
-// Multer Setup
-const upload = multer({
-  dest: '/tmp/', // Change to /tmp to work with Vercel's writable directory
-});
 
 const auth = new google.auth.GoogleAuth({
   keyFile: './config/credentials_google_cloud.json',
@@ -16,31 +10,37 @@ const auth = new google.auth.GoogleAuth({
 });
 
 const drive = google.drive({ version: 'v3', auth });
+// Memory storage avoids filesystem issues
+const upload = multer({ storage: multer.memoryStorage() });
+
+const pipeline = promisify(stream.pipeline);
 
 export const addResource = [
-  upload.single('file'), // Add Multer middleware here
+  upload.single('file'),
   catchAsyncError(async (req, res, next) => {
     try {
       const { level, subject, resourceType } = req.body;
 
       if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No file uploaded.' });
+        return res.status(400).json({ 
+          success: false, 
+          message: 'No file uploaded.' 
+        });
       }
-
-      // Ensure the file path is valid, stored in /tmp
-      const filePath = path.join('/tmp', req.file.filename);
 
       const fileMetadata = {
         name: req.file.originalname,
         parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
       };
 
+      const bufferStream = new stream.PassThrough();
+      await pipeline(req.file.buffer, bufferStream);
+
       const media = {
         mimeType: req.file.mimetype,
-        body: fs.createReadStream(filePath), // Read file from /tmp
+        body: bufferStream,
       };
 
-      // Upload to Google Drive
       const file = await drive.files.create({
         resource: fileMetadata,
         media: media,
@@ -57,9 +57,6 @@ export const addResource = [
 
       await newResource.save();
 
-      // Clean up the local file in /tmp after uploading to Google Drive
-      fs.unlinkSync(filePath);
-
       res.status(200).json({
         success: true,
         message: 'Resource uploaded successfully.',
@@ -69,8 +66,17 @@ export const addResource = [
         },
       });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ success: false, message: 'Upload failed.' });
+      console.error('Upload Error:', {
+        message: err.message,
+        stack: err.stack,
+        code: err.code,
+        response: err.response?.data
+      });
+      res.status(500).json({ 
+        success: false, 
+        message: 'Upload failed.',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
   }),
 ];
