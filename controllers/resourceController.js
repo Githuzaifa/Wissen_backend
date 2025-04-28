@@ -10,9 +10,6 @@ import path from 'path';
 const keyPath = path.join(process.cwd(), 'config', 'credentials_google_cloud.json');
 const keys = JSON.parse(readFileSync(keyPath, 'utf8'));
 
-// Fix newlines in private key if needed
-keys.private_key = keys.private_key.replace(/\\n/g, '\n');
-
 const auth = new google.auth.GoogleAuth({
   credentials: {
     type: process.env.GOOGLE_TYPE,
