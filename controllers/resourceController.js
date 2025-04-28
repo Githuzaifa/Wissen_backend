@@ -8,6 +8,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 
 const keys = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+keys.private_key = keys.private_key.replace(/\\n/g, '\n');
 
 const auth = new google.auth.GoogleAuth({
   credentials: keys,
