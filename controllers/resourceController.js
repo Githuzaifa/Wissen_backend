@@ -2,6 +2,8 @@ import multer from 'multer';
 import { google } from 'googleapis';
 import { catchAsyncError } from '../middlewares/CatchAsyncError.js';
 import { Resource } from '../models/Resource.js';
+import { promisify } from 'util';
+
 
 
 const auth = new google.auth.GoogleAuth({
