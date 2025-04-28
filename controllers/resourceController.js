@@ -4,12 +4,18 @@ import { catchAsyncError } from '../middlewares/CatchAsyncError.js';
 import { Resource } from '../models/Resource.js';
 import stream from 'stream';
 
+import { readFileSync } from 'fs';
+import path from 'path';
 
+const keyPath = path.join(process.cwd(), 'config', 'credentials_google_cloud.json');
+const keys = JSON.parse(readFileSync(keyPath, 'utf8'));
 
+// Fix newlines in private key if needed
+keys.private_key = keys.private_key.replace(/\\n/g, '\n');
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: './config/credentials_google_cloud.json',
-  scopes: ['https://www.googleapis.com/auth/drive'],
+  credentials: keys,
+  scopes: ['https://www.googleapis.com/auth/drive']
 });
 
 const drive = google.drive({ version: 'v3', auth });
