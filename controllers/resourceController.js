@@ -7,11 +7,10 @@ import stream from 'stream';
 import { readFileSync } from 'fs';
 import path from 'path';
 
-const keyPath = path.join(process.cwd(), 'config', 'credentials_google_cloud.json');
-const keys = JSON.parse(readFileSync(keyPath, 'utf8'));
+const keys = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
 
 const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON),
+  credentials: keys,
   scopes: ['https://www.googleapis.com/auth/drive']
 });
 
