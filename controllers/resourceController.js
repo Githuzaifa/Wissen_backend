@@ -3,6 +3,8 @@ import { google } from 'googleapis';
 import { catchAsyncError } from '../middlewares/CatchAsyncError.js';
 import { Resource } from '../models/Resource.js';
 import stream from 'stream';
+import { JWT } from 'google-auth-library';
+
 
 import { readFileSync } from 'fs';
 import path from 'path';
@@ -10,7 +12,7 @@ import path from 'path';
 const keys = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
 keys.private_key = keys.private_key.replace(/\\n/g, '\n');
 
-const auth = new google.auth.GoogleAuth({
+const auth = new JWT({
   credentials: keys,
   scopes: ['https://www.googleapis.com/auth/drive']
 });
